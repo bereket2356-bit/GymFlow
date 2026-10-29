@@ -86,12 +86,12 @@ export default function Attendance() {
     setConfirming(true);
   };
 
-  const commit = () => {
-    const result = saveAttendance(session.id);
+  const commit = async () => {
+    const result = await saveAttendance(session.id);
     setConfirming(false);
     const bits = [];
-    if (result.deducted) bits.push(result.deducted + " " + plural(result.deducted, "session") + " deducted");
-    if (result.restored) bits.push(result.restored + " " + plural(result.restored, "session") + " restored");
+    if (result?.deducted) bits.push(result.deducted + " " + plural(result.deducted, "session") + " deducted");
+    if (result?.restored) bits.push(result.restored + " " + plural(result.restored, "session") + " restored");
     push("Attendance saved for " + session.title + ". " + (bits.length ? bits.join(", ") : "No session changes") + ".");
   };
 
