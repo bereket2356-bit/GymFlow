@@ -83,8 +83,8 @@ export default function Dashboard() {
     .filter((c) => memStatus(currentMembership(c)) === "Expired")
     .map((c) => c.name.split(" ")[0] + ", " + Math.abs(daysFromToday(currentMembership(c).end)) + " days ago");
 
-  const review = (r) => {
-    markReviewed(r.key);
+  const review = async (r) => {
+    await markReviewed(r.key);
     push("Reminder marked reviewed for " + r.customer.name + ". The record is unchanged.");
   };
 
