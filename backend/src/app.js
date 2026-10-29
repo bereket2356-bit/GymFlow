@@ -18,15 +18,33 @@ export function createApp() {
   app.disable("x-powered-by");
 
   app.use(requestId);
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+  const allowedOrigins = [
+    ...env.corsOrigin,
+    "https://ethiogymflow.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+  ];
+
   app.use(
     cors({
       origin(origin, callback) {
-        // Non-browser clients (curl, tests) send no Origin header.
-        if (!origin || env.corsOrigin.includes(origin)) return callback(null, true);
+        if (!origin) return callback(null, true);
+        const cleanOrigin = origin.replace(/\/$/, "");
+        if (
+          allowedOrigins.includes(cleanOrigin) ||
+          cleanOrigin.endsWith(".vercel.app") ||
+          cleanOrigin.includes("ethiogymflow")
+        ) {
+          return callback(null, true);
+        }
         return callback(null, false);
       },
       credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
+      exposedHeaders: ["Set-Cookie"],
     }),
   );
   app.use(express.json({ limit: "100kb" }));

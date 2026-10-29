@@ -3,12 +3,27 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { login as loginOwner } from "../services/authService.js";
 import { serializeOwner } from "../services/serialize.js";
 
-const COOKIE_OPTIONS = () => ({
-  httpOnly: true,
-  secure: env.cookieSecure,
-  sameSite: process.env.COOKIE_SAMESITE || (env.isProduction ? "none" : "strict"),
-  path: "/",
-});
+const COOKIE_OPTIONS = () => {
+  if (env.isTest) {
+    return {
+      httpOnly: true,
+      secure: env.cookieSecure,
+      sameSite: "strict",
+      path: "/",
+    };
+  }
+  const isProd =
+    env.isProduction ||
+    process.env.RENDER === "true" ||
+    process.env.NODE_ENV === "production" ||
+    process.env.COOKIE_SECURE === "true";
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "strict",
+    path: "/",
+  };
+};
 
 export const login = asyncHandler(async (req, res) => {
   const { token, owner } = await loginOwner(req.body.email, req.body.password);
