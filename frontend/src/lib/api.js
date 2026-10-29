@@ -1,4 +1,5 @@
-const BASE = "/api/v1";
+const API_BASE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "";
+const BASE = API_BASE ? `${API_BASE.replace(/\/$/, "")}/api/v1` : "/api/v1";
 
 async function request(path, options = {}) {
   const url = path.startsWith("http") ? path : `${BASE}${path}`;
