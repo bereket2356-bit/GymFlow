@@ -14,21 +14,25 @@ export default function SignIn() {
   const { push } = useToast();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("owner@foundry.boxing");
-  const [password, setPassword] = useState("ringside");
+  const [email, setEmail] = useState("owner@foundryboxing.com");
+  const [password, setPassword] = useState("Foundry123");
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const [forgot, setForgot] = useState("");
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const result = signIn(email, password);
+    if (submitting) return;
+    setSubmitting(true);
+    const result = await signIn(email, password);
+    setSubmitting(false);
     if (!result.ok) {
       setErrors(result.errors);
       return;
     }
     setErrors({});
     navigate("/", { replace: true });
-    push("Signed in as " + OWNER.name + " — owner console.");
+    push("Signed in as " + (result.owner?.name || OWNER.name) + " — owner console.");
   };
 
   return (
@@ -74,12 +78,12 @@ export default function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
               />
               <p className="field-hint" id="password-hint">
-                Sample build: any valid email and a password of 6 characters or more.
+                Default owner credentials: owner@foundryboxing.com / Foundry123
               </p>
               <p className="field-error" id="password-error" role="alert">{errors.password}</p>
             </div>
-            <button className="btn btn-primary" type="submit" style={{ width: "100%" }}>
-              Sign in
+            <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: "100%" }}>
+              {submitting ? "Signing in…" : "Sign in"}
             </button>
           </form>
           <div className="auth-actions">
