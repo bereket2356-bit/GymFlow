@@ -411,3 +411,116 @@ export function ArchiveModal({ customerId, onClose }) {
     </Modal>
   );
 }
+
+/** Permanent deletion modal: requires typing customer ID, offers archive on 409. */
+export function DeleteCustomerModal({ customerId, onClose, onDeleted, onArchiveInstead }) {
+  const { customerById, deleteCustomer } = useData();
+  const { push } = useToast();
+  const customer = typeof customerId === "object" ? customerId : customerById(customerId);
+
+  const [typedCode, setTypedCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [hasRecords, setHasRecords] = useState(false);
+
+  if (!customer) return null;
+
+  const targetCode = customer.customerId || customer.id;
+  const isMatch = typedCode.trim() === targetCode;
+
+  const handleDelete = async () => {
+    if (!isMatch || submitting) return;
+    setSubmitting(true);
+    setErrorMsg("");
+    setHasRecords(false);
+
+    try {
+      await deleteCustomer(customer._id || customer.id || targetCode);
+      push(`Customer ${targetCode} permanently deleted`);
+      onClose();
+      if (onDeleted) onDeleted();
+    } catch (err) {
+      setSubmitting(false);
+      const is409 =
+        err.status === 409 ||
+        err.data?.error?.code === "CUSTOMER_HAS_RECORDS" ||
+        err.code === "CUSTOMER_HAS_RECORDS";
+
+      if (is409) {
+        setHasRecords(true);
+        setErrorMsg(
+          err.data?.error?.message ||
+            err.message ||
+            "This customer has payment or membership history and cannot be deleted. Archive the customer instead."
+        );
+      } else {
+        setErrorMsg(err.message || "Failed to delete customer.");
+      }
+    }
+  };
+
+  return (
+    <Modal
+      title="Delete customer?"
+      sub="This action is permanent and cannot be undone."
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          {hasRecords && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onClose();
+                if (onArchiveInstead) {
+                  onArchiveInstead(customer);
+                }
+              }}
+            >
+              Archive instead
+            </Button>
+          )}
+          <Button
+            variant="danger"
+            disabled={!isMatch || submitting}
+            onClick={handleDelete}
+          >
+            {submitting ? "Deleting…" : "Delete permanently"}
+          </Button>
+        </>
+      }
+    >
+      <div className="modal-body">
+        <div className="callout callout--danger">
+          <span>
+            <strong>Warning:</strong> Deleting permanently removes <strong>{customer.name}</strong> ({targetCode}) from the database. Financial and attendance history must not exist.
+          </span>
+        </div>
+
+        {errorMsg && (
+          <div className="callout callout--warning" style={{ marginTop: 12 }} role="alert">
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <div className="field" style={{ marginTop: 16 }}>
+          <label className="label" htmlFor="delete-confirm-input">
+            Type <strong>{targetCode}</strong> to confirm deletion
+          </label>
+          <input
+            id="delete-confirm-input"
+            className="input"
+            type="text"
+            value={typedCode}
+            placeholder={targetCode}
+            autoFocus
+            autoComplete="off"
+            onChange={(e) => setTypedCode(e.target.value)}
+          />
+        </div>
+      </div>
+    </Modal>
+  );
+}

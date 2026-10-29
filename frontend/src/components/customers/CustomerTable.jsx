@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Pill from "../ui/Pill.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { money } from "../../lib/money.js";
 import { fmtDate, fmtShort, daysLabel, daysFromToday, daysBetween } from "../../lib/dates.js";
 import { planOf, memType, currentMembership, customerBalance, memStatus, paymentLabels } from "../../lib/status.js";
@@ -71,7 +72,19 @@ function SortHeader({ label, column, sortKey, dir, onSort }) {
 }
 
 /** The customer register table. Rows link to `/customers/:id`. */
-export default function CustomerTable({ customers, payments, sortKey, dir, onSort }) {
+export default function CustomerTable({
+  customers,
+  payments,
+  sortKey,
+  dir,
+  onSort,
+  onArchive,
+  onRestore,
+  onDelete,
+}) {
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner" || !user?.role;
+
   return (
     <div className="table-wrap">
       <table className="table">
@@ -84,6 +97,7 @@ export default function CustomerTable({ customers, payments, sortKey, dir, onSor
             <th scope="col"><SortHeader label="Membership" column="status" sortKey={sortKey} dir={dir} onSort={onSort} /></th>
             <th scope="col">Payment</th>
             <th scope="col" className="right"><SortHeader label="Balance" column="balance" sortKey={sortKey} dir={dir} onSort={onSort} /></th>
+            <th scope="col" className="right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -111,6 +125,36 @@ export default function CustomerTable({ customers, payments, sortKey, dir, onSor
                   ))}
                 </td>
                 <td className={"right td-money " + (bal > 0 ? "danger" : "muted")}>{money(bal)}</td>
+                <td className="right" onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: "inline-flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" }}>
+                    {!c.archived ? (
+                      <button
+                        className="btn btn-sm"
+                        type="button"
+                        onClick={() => onArchive && onArchive(c)}
+                      >
+                        Archive
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-sm"
+                        type="button"
+                        onClick={() => onRestore && onRestore(c)}
+                      >
+                        Restore
+                      </button>
+                    )}
+                    {isOwner && (
+                      <button
+                        className="btn btn-sm btn-danger"
+                        type="button"
+                        onClick={() => onDelete && onDelete(c)}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             );
           })}
