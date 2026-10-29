@@ -23,13 +23,18 @@ async function start() {
     logger.info({ signal }, "Shutting down");
     server.close(async () => {
       await disconnectDB();
-      process.exit(0);
+      if (signal === "SIGUSR2") {
+        process.kill(process.pid, "SIGUSR2");
+      } else {
+        process.exit(0);
+      }
     });
-    setTimeout(() => process.exit(1), 10000).unref();
+    setTimeout(() => process.exit(1), 3000).unref();
   }
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGUSR2", () => shutdown("SIGUSR2"));
 }
 
 start().catch((err) => {

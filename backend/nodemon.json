@@ -1,0 +1,6 @@
+{
+  "watch": ["src"],
+  "ext": "js,mjs,cjs,json",
+  "signal": "SIGINT",
+  "delay": 200
+}

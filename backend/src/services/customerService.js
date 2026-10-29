@@ -90,9 +90,10 @@ export async function listCustomers({ search, status, sort, page, limit, skip, s
         balanceCents: 0,
       };
       let currentMembership = null;
+      const enrichedMemberships = await enrichMemberships(memberships, settings);
       if (current) {
-        const [enriched] = await enrichMemberships([current], settings);
-        currentMembership = enriched;
+        const foundCurrent = enrichedMemberships.find((m) => String(m.id) === String(current._id));
+        currentMembership = foundCurrent || (await enrichMemberships([current], settings))[0];
       }
       const lastVisit = visits.get(String(customer._id)) ?? null;
       return {
@@ -104,6 +105,7 @@ export async function listCustomers({ search, status, sort, page, limit, skip, s
         status: customer.status,
         registeredAt: toISODate(customer.registeredAt),
         archivedAt: customer.archivedAt ? new Date(customer.archivedAt).toISOString() : null,
+        memberships: enrichedMemberships,
         currentMembership,
         membershipStatus: currentMembership?.status ?? null,
         balance: fromCents(balance.balanceCents),
