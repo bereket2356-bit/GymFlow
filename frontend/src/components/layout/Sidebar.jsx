@@ -16,14 +16,18 @@ const NAV = [
 
 /** Primary navigation: a 240px rail on desktop, an off-canvas drawer on mobile. */
 export default function Sidebar({ onNavigate }) {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { customers } = useData();
   const navigate = useNavigate();
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
     navigate("/signin");
   };
+
+  const ownerName = user?.name || OWNER.name;
+  const ownerInitials = user?.initials || OWNER.initials;
+  const ownerRole = user?.role || OWNER.role;
 
   return (
     <aside className="sidebar" aria-label="Primary navigation">
@@ -61,12 +65,12 @@ export default function Sidebar({ onNavigate }) {
         <ThemeSwitch variant="drawer" />
         <div className="owner">
           <span className="avatar" aria-hidden="true">
-            {OWNER.initials}
+            {ownerInitials}
           </span>
           <span>
-            <span className="owner-name">{OWNER.name}</span>
+            <span className="owner-name">{ownerName}</span>
             <span className="owner-role" style={{ display: "block" }}>
-              {OWNER.role} · only account
+              {ownerRole} · only account
             </span>
           </span>
         </div>
