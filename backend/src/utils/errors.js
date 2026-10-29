@@ -16,6 +16,11 @@ export const forbidden = (message = "You do not have access to this resource.") 
   new AppError(403, "FORBIDDEN", message);
 export const notFound = (message = "Resource not found.") => new AppError(404, "NOT_FOUND", message);
 export const conflict = (message, details) => new AppError(409, "CONFLICT", message, details);
+export const customerHasRecords = (
+  message = "This customer has payment or membership history and cannot be deleted. Archive the customer instead."
+) => new AppError(409, "CUSTOMER_HAS_RECORDS", message);
+export const emailTaken = (message = "Email address is already in use.") =>
+  new AppError(409, "EMAIL_TAKEN", message);
 export const businessRule = (message, details) => new AppError(422, "BUSINESS_RULE_VIOLATION", message, details);
 export const rateLimited = (message = "Too many requests. Try again later.") =>
   new AppError(429, "RATE_LIMITED", message);
