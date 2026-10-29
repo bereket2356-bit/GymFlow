@@ -16,13 +16,23 @@ import NotFound from "./pages/NotFound.jsx";
 
 /** Protected routes: unauthenticated visitors are sent to /signin. */
 function RequireAuth() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 13 }}>
+          Loading session…
+        </p>
+      </div>
+    );
+  }
   return user ? <AppShell /> : <Navigate to="/signin" replace />;
 }
 
 /** Signed-in owners skip the sign-in screen. */
 function SignInRoute() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return null;
   return user ? <Navigate to="/" replace /> : <SignIn />;
 }
 
