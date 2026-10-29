@@ -10,7 +10,9 @@ export async function requireOwner(req, _res, next) {
     if (!token) throw unauthenticated("Authentication required.");
     const payload = verifyToken(token);
     const owner = await Owner.findById(payload.sub);
-    if (!owner || owner.role !== "owner") throw unauthenticated("Your session is no longer valid.");
+    if (!owner || owner.role !== "owner" || (payload.tokenVersion ?? 0) !== (owner.tokenVersion ?? 0)) {
+      throw unauthenticated("Your session is no longer valid.");
+    }
     req.owner = owner;
     req.ownerId = owner._id;
     next();

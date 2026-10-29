@@ -35,3 +35,23 @@ export const loginEmailLimiter = rateLimit({
   keyGenerator: (req) => `email:${String(req.body?.email ?? "").toLowerCase().trim()}`,
   handler,
 });
+
+/** Five attempts per 15 minutes per owner for password change. */
+export const passwordChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => `password:${String(req.ownerId ?? req.ip)}`,
+  handler,
+});
+
+/** Five attempts per 15 minutes per owner for sign out all. */
+export const signOutAllLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => `signoutall:${String(req.ownerId ?? req.ip)}`,
+  handler,
+});
