@@ -1,28 +1,38 @@
-import cors from "cors";
-import express from "express";
-import mongoose from "mongoose";
-import connectDB from "./config/db.js";
+import env from "./config/env.js";
+import connectDB, { disconnectDB } from "./config/db.js";
+import { createApp } from "./app.js";
+import { logger } from "./utils/logger.js";
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+const app = createApp();
 
-app.use(cors());
-app.use(express.json());
+async function start() {
+  const connected = await connectDB();
+  if (!connected) {
+    logger.fatal("Could not connect to MongoDB. Set MONGODB_URI and make sure the database is running.");
+    process.exit(1);
+  }
 
-app.get("/api/health", (req, res) => {
-  const states = ["disconnected", "connected", "connecting", "disconnecting"];
-  res.json({
-    status: "ok",
-    service: "BGMS API",
-    time: new Date().toISOString(),
-    database: states[mongoose.connection.readyState] ?? "unknown",
+  const server = app.listen(env.port, () => {
+    logger.info(
+      { port: env.port, env: env.nodeEnv, timezone: env.timezone },
+      `BGMS API listening on http://localhost:${env.port}`,
+    );
   });
-});
 
-// Nothing here awaits the database, so the API comes up immediately whether or
-// not MongoDB is reachable. A failed connection is logged by connectDB.
-connectDB();
+  async function shutdown(signal) {
+    logger.info({ signal }, "Shutting down");
+    server.close(async () => {
+      await disconnectDB();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10000).unref();
+  }
 
-app.listen(PORT, () => {
-  console.log(`BGMS API listening on http://localhost:${PORT}`);
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+start().catch((err) => {
+  logger.fatal({ err }, "Failed to start the API");
+  process.exit(1);
 });
