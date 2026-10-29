@@ -125,7 +125,7 @@ function VisitList({ log }) {
 /** Customer detail: identity header, four tabs, owner-only notes, money actions. */
 export default function CustomerDetail() {
   const { id } = useParams();
-  const { customerById, payments, saveNotes, setArchived, sel, attendanceLog } = useData();
+  const { customerById, fetchCustomerDetail, payments, saveNotes, setArchived, sel, attendanceLog } = useData();
   const { push } = useToast();
   const [tab, setTab] = useState("overview");
   const [modal, setModal] = useState(null);
@@ -135,7 +135,10 @@ export default function CustomerDetail() {
 
   useEffect(() => {
     setTab("overview");
-  }, [id]);
+    if (id && fetchCustomerDetail) {
+      fetchCustomerDetail(id);
+    }
+  }, [id, fetchCustomerDetail]);
 
   useEffect(() => {
     setDraft(customer ? customer.notes || "" : "");
@@ -171,8 +174,8 @@ export default function CustomerDetail() {
       <button
         className="btn"
         type="button"
-        onClick={() => {
-          setArchived(customer.id, false);
+        onClick={async () => {
+          await setArchived(customer.id, false);
           push(customer.name + " restored to the register.");
         }}
       >
@@ -339,8 +342,8 @@ export default function CustomerDetail() {
                 <button
                   className="btn btn-sm"
                   type="button"
-                  onClick={() => {
-                    saveNotes(customer.id, draft);
+                  onClick={async () => {
+                    await saveNotes(customer.id, draft);
                     push("Private notes saved for " + customer.name + ".");
                   }}
                 >
