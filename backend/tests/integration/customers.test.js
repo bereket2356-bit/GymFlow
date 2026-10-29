@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { AuditLog } from "../../src/models/AuditLog.js";
 import {
   createCustomer,
   createMembership,
@@ -85,6 +86,54 @@ describe("customers", () => {
       .post(`/api/v1/customers/${customer.id}/memberships`)
       .send({ packageId: pkg.id });
     expect(response.status).toBe(422);
+  });
+
+  it("deletes a customer with no history, removes record, and logs audit", async () => {
+    const customer = await createCustomer(agent, { name: "To Delete" });
+    const res = await agent.delete(`/api/v1/customers/${customer.id}`);
+    expect([200, 204]).toContain(res.status);
+
+    const getRes = await agent.get(`/api/v1/customers/${customer.id}`);
+    expect(getRes.status).toBe(404);
+
+    const audit = await AuditLog.findOne({ action: "customer.delete", entityId: customer.id });
+    expect(audit).toBeTruthy();
+    expect(audit.before?.name).toBe("To Delete");
+  });
+
+  it("blocks deleting a customer with payments returning 409 CUSTOMER_HAS_RECORDS", async () => {
+    const pkg = await createPackage(agent);
+    const customer = await createCustomer(agent);
+    const membership = await createMembership(agent, customer, pkg);
+    await recordPayment(agent, {
+      customerId: customer.customerId,
+      membershipId: membership.code,
+      amount: 100,
+      method: "cash",
+      receivedOn: today(),
+    });
+
+    const res = await agent.delete(`/api/v1/customers/${customer.id}`);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CUSTOMER_HAS_RECORDS");
+    expect(res.body.error.message).toContain("This customer has payment or membership history");
+  });
+
+  it("blocks deleting a customer with attendance returning 409 CUSTOMER_HAS_RECORDS", async () => {
+    const customer = await createCustomer(agent);
+    const session = await createSession(agent);
+    await agent
+      .put(`/api/v1/sessions/${session.id}/attendance`)
+      .send({ entries: [{ customerId: customer.customerId, status: "present" }] });
+
+    const res = await agent.delete(`/api/v1/customers/${customer.id}`);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("CUSTOMER_HAS_RECORDS");
+  });
+
+  it("returns 404 when attempting to delete a non-existent customer", async () => {
+    const res = await agent.delete("/api/v1/customers/507f1f77bcf86cd799439011");
+    expect(res.status).toBe(404);
   });
 });
 
