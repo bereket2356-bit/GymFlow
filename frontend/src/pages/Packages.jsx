@@ -42,20 +42,20 @@ export default function Packages() {
   const openEditor = (id) => setEditor(id || "__new__");
   const editingPkg = editor && editor !== "__new__" ? packages.find((p) => p.id === editor) : null;
 
-  const toggle = (pkg) => {
+  const toggle = async (pkg) => {
     if (!pkg.active) {
-      setPackageActive(pkg.id, true);
+      await setPackageActive(pkg.id, true);
       push("Package ‘" + pkg.name + "’ activated. It can be assigned to new memberships.");
       return;
     }
     setPendingToggle(pkg.id);
   };
 
-  const confirmDeactivate = () => {
+  const confirmDeactivate = async () => {
     const pkg = packages.find((p) => p.id === pendingToggle);
     setPendingToggle(null);
     if (!pkg) return;
-    setPackageActive(pkg.id, false);
+    await setPackageActive(pkg.id, false);
     push("Package ‘" + pkg.name + "’ deactivated. Existing memberships are unchanged.");
   };
 
