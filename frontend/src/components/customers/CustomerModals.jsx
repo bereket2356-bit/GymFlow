@@ -26,7 +26,7 @@ export function NewCustomerModal({ onClose }) {
   const [errors, setErrors] = useState({});
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const next = {};
     if (form.name.trim().length < 2) next.name = "Enter the customer’s full name.";
@@ -39,7 +39,7 @@ export function NewCustomerModal({ onClose }) {
       if (el) el.focus();
       return;
     }
-    const customer = addCustomer({
+    const customer = await addCustomer({
       name: form.name.trim(),
       phone: form.phone.trim(),
       planKey: form.planKey,
@@ -47,8 +47,8 @@ export function NewCustomerModal({ onClose }) {
       notes: form.notes.trim(),
     });
     onClose();
-    navigate("/customers/" + customer.id);
-    push("Customer " + customer.name + " added with a " + PLANS[form.planKey].name + " package.");
+    if (customer?.id) navigate("/customers/" + customer.id);
+    push("Customer " + (customer?.name || form.name.trim()) + " added with a " + PLANS[form.planKey].name + " package.");
   };
 
   return (
@@ -161,7 +161,7 @@ export function MembershipModal({ customerId, mode = "new", onClose }) {
   const plan = PLANS[form.planKey];
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const next = {};
     if (!form.start) next.start = "Choose a start date.";
@@ -170,7 +170,7 @@ export function MembershipModal({ customerId, mode = "new", onClose }) {
     if (Object.keys(next).length) return;
     const targetId = fixed ? fixed.id : form.customerId;
     const target = customerById(targetId);
-    addMembership({
+    await addMembership({
       customerId: targetId,
       planKey: form.planKey,
       start: form.start,
@@ -180,9 +180,9 @@ export function MembershipModal({ customerId, mode = "new", onClose }) {
     push(
       isRenew
         ? form.start > TODAY
-          ? "Renewal scheduled for " + target.name + " from " + fmtDate(form.start) + "."
-          : "Renewal started for " + target.name + " on " + fmtDate(form.start) + "."
-        : plan.name + " added for " + target.name + ".",
+          ? "Renewal scheduled for " + (target?.name || "customer") + " from " + fmtDate(form.start) + "."
+          : "Renewal started for " + (target?.name || "customer") + " on " + fmtDate(form.start) + "."
+        : plan.name + " added for " + (target?.name || "customer") + ".",
     );
   };
 
@@ -294,14 +294,14 @@ export function EditCustomerModal({ customerId, onClose }) {
   const [errors, setErrors] = useState({});
   if (!customer) return null;
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const next = {};
     if (form.name.trim().length < 2) next.name = "Enter a name of at least 2 characters.";
     if (!PHONE_RE.test(form.phone.trim())) next.phone = "Enter a valid phone number.";
     setErrors(next);
     if (Object.keys(next).length) return;
-    editCustomer(customerId, { name: form.name.trim(), phone: form.phone.trim() });
+    await editCustomer(customerId, { name: form.name.trim(), phone: form.phone.trim() });
     onClose();
     push("Details updated for " + form.name.trim() + ".");
   };
@@ -375,8 +375,8 @@ export function ArchiveModal({ customerId, onClose }) {
           <Button onClick={onClose}>Cancel</Button>
           <Button
             variant="danger"
-            onClick={() => {
-              setArchived(customerId, true);
+            onClick={async () => {
+              await setArchived(customerId, true);
               onClose();
               push(customer.name + " archived. Nothing was deleted.", "info");
             }}
