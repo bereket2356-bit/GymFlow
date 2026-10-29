@@ -6,7 +6,7 @@ import { serializeOwner } from "../services/serialize.js";
 const COOKIE_OPTIONS = () => ({
   httpOnly: true,
   secure: env.cookieSecure,
-  sameSite: "strict",
+  sameSite: process.env.COOKIE_SAMESITE || (env.isProduction ? "none" : "strict"),
   path: "/",
 });
 
