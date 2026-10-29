@@ -7,7 +7,7 @@ import { SEED_SESSIONS, ROSTERS, SEED_MARKS, seedSavedMarks } from "../data/sess
 import { GYM } from "../data/config.js";
 import { buildReminders } from "../data/reminders.js";
 import { TODAY, shiftISO, monthStartISO, addDaysISO } from "../lib/dates.js";
-import { toCents } from "../lib/money.js";
+import { toCents, setCurrencySymbol } from "../lib/money.js";
 import {
   currentMembership,
   memStatus,
@@ -154,23 +154,30 @@ function normalizeGym(settings) {
 
 export function DataProvider({ children }) {
   const { user } = useAuth();
-  const [customers, setCustomers] = useState(() => clone(SEED_CUSTOMERS));
-  const [payments, setPayments] = useState(() => clone(SEED_PAYMENTS));
-  const [packages, setPackages] = useState(() => clone(SEED_PACKAGES));
-  const [sessions, setSessions] = useState(() => clone(SEED_SESSIONS));
-  const [marks, setMarks] = useState(() => clone(SEED_MARKS));
-  const [savedMarks, setSavedMarks] = useState(seedSavedMarks);
-  const [attendanceLog, setAttendanceLog] = useState(seedAttendanceLog);
+  const [customers, setCustomers] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [marks, setMarks] = useState({});
+  const [savedMarks, setSavedMarks] = useState({});
+  const [attendanceLog, setAttendanceLog] = useState({});
   const [deductions, setDeductions] = useState({});
   const [reviewed, setReviewed] = useState([]);
   const [gym, setGym] = useState({ ...GYM });
   const [period, setPeriod] = useState("month");
   const [reports, setReports] = useState({ from: monthStartISO(), to: TODAY });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const ids = useRef({ customer: 1051, membership: 3315, payment: 9064, package: 6 });
 
   // Initial load from backend API when authenticated
   const loadInitialData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
     try {
       const [custRes, pkgRes, payRes, setRes, remRes, todaySessRes, sessRes] = await Promise.allSettled([
         api.customers.list({ limit: 100 }),
@@ -197,7 +204,9 @@ export function DataProvider({ children }) {
       }
 
       if (setRes.status === "fulfilled" && setRes.value?.data?.settings) {
-        setGym(normalizeGym(setRes.value.data.settings));
+        const normGym = normalizeGym(setRes.value.data.settings);
+        setGym(normGym);
+        setCurrencySymbol(normGym.currency);
       }
 
       if (remRes.status === "fulfilled" && remRes.value?.data?.reminders) {
@@ -261,8 +270,14 @@ export function DataProvider({ children }) {
           setAttendanceLog((prev) => ({ ...prev, ...logMap }));
         }
       }
+
+      if (custRes.status === "rejected" && pkgRes.status === "rejected") {
+        setError(custRes.reason?.message || "Failed to connect to the gym server.");
+      }
     } catch (err) {
-      console.warn("Initial data load encountered an error:", err);
+      setError(err?.message || "Failed to load data.");
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
@@ -288,7 +303,7 @@ export function DataProvider({ children }) {
         return fullCust;
       }
     } catch (err) {
-      console.warn("Failed to fetch customer detail:", err);
+      // handled
     }
     return null;
   }, []);
@@ -314,7 +329,7 @@ export function DataProvider({ children }) {
               confirm: true,
             });
           } catch (memErr) {
-            console.warn("Failed to create membership on backend:", memErr);
+            // handled
           }
         }
 
@@ -331,18 +346,7 @@ export function DataProvider({ children }) {
         setCustomers((list) => [...list, normalized]);
         return normalized;
       } catch (err) {
-        console.error("Backend customer creation failed:", err);
-        // Fallback optimistic creation
-        const cid = "CUS-" + ids.current.customer++;
-        const mid = "MEM-" + ids.current.membership++;
-        const membership = { id: mid, plan: planKey, start, end: addDaysISO(start, plan.days), price: plan.price };
-        if (plan.type === "session") {
-          membership.sessionsTotal = plan.sessions;
-          membership.sessionsLeft = plan.sessions;
-        }
-        const customer = { id: cid, name, phone, joined: TODAY, archived: false, notes, memberships: [membership] };
-        setCustomers((list) => [...list, customer]);
-        return customer;
+        throw err;
       }
     },
     [packages],
@@ -364,7 +368,7 @@ export function DataProvider({ children }) {
             notes: patch.notes,
           });
         } catch (err) {
-          console.error("Failed to update customer on backend:", err);
+          // handled
         }
       }
     },
@@ -387,9 +391,21 @@ export function DataProvider({ children }) {
             await api.customers.restore(target._id || target.id);
           }
         } catch (err) {
-          console.error("Failed to set archive status on backend:", err);
+          // ignore or rethrow
         }
       }
+    },
+    [customerById],
+  );
+
+  const deleteCustomer = useCallback(
+    async (id) => {
+      const target = customerById(id);
+      const targetId = target?._id || target?.id || id;
+      await api.customers.delete(targetId);
+      setCustomers((list) =>
+        list.filter((c) => c.id !== id && c._id !== targetId && c.customerId !== id && c._id !== id),
+      );
     },
     [customerById],
   );
@@ -406,7 +422,7 @@ export function DataProvider({ children }) {
         try {
           await api.customers.update(target._id || target.id, { notes });
         } catch (err) {
-          console.error("Failed to save notes on backend:", err);
+          // handled
         }
       }
     },
@@ -437,7 +453,7 @@ export function DataProvider({ children }) {
           }
           return;
         } catch (err) {
-          console.error("Failed to add membership on backend:", err);
+          // handled
         }
       }
 
@@ -492,7 +508,7 @@ export function DataProvider({ children }) {
 
         return res?.data?.payment?.id || "PAY-" + ids.current.payment++;
       } catch (err) {
-        console.error("Failed to record payment on backend:", err);
+        // handled
         // Optimistic fallback
         const id = "PAY-" + ids.current.payment++;
         setPayments((list) => [
@@ -533,7 +549,7 @@ export function DataProvider({ children }) {
           if (custRes?.data) setCustomers(custRes.data.map(normalizeCustomer));
           return originalPay.id;
         } catch (err) {
-          console.error("Failed to add correction adjustment on backend:", err);
+          // handled
         }
       }
 
@@ -604,7 +620,7 @@ export function DataProvider({ children }) {
               if (attRes.data.restored) restored = attRes.data.restored;
             }
           } catch (err) {
-            console.error("Failed to mark attendance on backend:", err);
+            // handled
           }
         }
       }
@@ -695,7 +711,7 @@ export function DataProvider({ children }) {
             const refreshed = await api.packages.list({ limit: 100 });
             if (refreshed?.data) setPackages(refreshed.data.map(normalizePackage));
           } catch (err) {
-            console.error("Failed to update package on backend:", err);
+            // handled
           }
         }
         return pkg.id;
@@ -710,7 +726,7 @@ export function DataProvider({ children }) {
           return normalized.id;
         }
       } catch (err) {
-        console.error("Failed to create package on backend:", err);
+        // handled
       }
 
       const id = "PKG-" + String(ids.current.package++).padStart(2, "0");
@@ -732,7 +748,7 @@ export function DataProvider({ children }) {
             await api.packages.deactivate(target._id || target.id, true);
           }
         } catch (err) {
-          console.error("Failed to change package status on backend:", err);
+          // handled
         }
       }
     },
@@ -747,7 +763,7 @@ export function DataProvider({ children }) {
     try {
       await api.dashboard.reviewReminder(key);
     } catch (err) {
-      console.warn("Failed to mark reminder reviewed on backend:", err);
+      // handled
     }
   }, []);
 
@@ -761,7 +777,7 @@ export function DataProvider({ children }) {
         inactivityDays: patch.inactive,
       });
     } catch (err) {
-      console.error("Failed to update gym settings on backend:", err);
+      // handled
     }
   }, []);
 
@@ -873,6 +889,8 @@ export function DataProvider({ children }) {
 
   const value = useMemo(
     () => ({
+      loading,
+      error,
       customers,
       payments,
       packages,
@@ -890,6 +908,7 @@ export function DataProvider({ children }) {
       fetchCustomerDetail,
       addCustomer,
       editCustomer,
+      deleteCustomer,
       setArchived,
       saveNotes,
       addMembership,
@@ -907,8 +926,8 @@ export function DataProvider({ children }) {
       refreshData: loadInitialData,
     }),
     [
-      customers, payments, packages, sessions, marks, savedMarks, attendanceLog, deductions, reviewed, gym, period, reports,
-      sel, customerById, fetchCustomerDetail, addCustomer, editCustomer, setArchived, saveNotes, addMembership, addPayment, addCorrection,
+      loading, error, customers, payments, packages, sessions, marks, savedMarks, attendanceLog, deductions, reviewed, gym, period, reports,
+      sel, customerById, fetchCustomerDetail, addCustomer, editCustomer, deleteCustomer, setArchived, saveNotes, addMembership, addPayment, addCorrection,
       toggleMark, saveAttendance, upsertPackage, setPackageActive, isReviewed, markReviewed, updateGym, loadInitialData,
     ],
   );

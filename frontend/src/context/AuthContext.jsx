@@ -9,17 +9,24 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 function formatOwner(raw) {
   if (!raw) return null;
   const name = raw.name || OWNER.name;
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0] || "")
-    .join("")
-    .toUpperCase() || OWNER.initials;
+  const displayName = raw.displayName || null;
+  const effectiveName = displayName || name.split(/\s+/)[0] || name;
+  const initials =
+    raw.avatarInitials ||
+    effectiveName
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0] || "")
+      .join("")
+      .toUpperCase() ||
+    OWNER.initials;
 
   return {
     ...raw,
     name,
+    displayName,
+    effectiveName,
     initials,
     role: raw.role || OWNER.role,
   };
@@ -77,14 +84,31 @@ export function AuthProvider({ children }) {
   const signOut = useCallback(async () => {
     try {
       await api.auth.logout();
-    } catch (err) {
-      console.warn("Logout error:", err);
+    } catch {
+      // ignore
     } finally {
       setUser(null);
     }
   }, []);
 
-  const value = useMemo(() => ({ user, loading, signIn, signOut }), [user, loading, signIn, signOut]);
+  const updateProfile = useCallback(async (data) => {
+    const res = await api.auth.updateProfile(data);
+    if (res?.data?.owner) {
+      setUser(formatOwner(res.data.owner));
+    }
+    return res;
+  }, []);
+
+  const signOutAll = useCallback(async (currentPassword) => {
+    const res = await api.auth.signOutAll({ currentPassword });
+    setUser(null);
+    return res;
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, signIn, signOut, updateProfile, signOutAll }),
+    [user, loading, signIn, signOut, updateProfile, signOutAll],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
