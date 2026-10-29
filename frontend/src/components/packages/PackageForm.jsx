@@ -133,7 +133,7 @@ export default function PackageForm({ pkg, onClose }) {
     if (membersExist && hasSessions(draft) && Number(draft.sessions) !== Number(saved.current.sessions)) setDialog("sessions");
   };
 
-  const save = () => {
+  const save = async () => {
     if (!valid) {
       setShowAll(true);
       const first = ["name", "description", "type", "validity", "sessions", "price"].find((k) => errors[k]);
@@ -146,7 +146,7 @@ export default function PackageForm({ pkg, onClose }) {
       setDialog("terms");
       return;
     }
-    upsertPackage({
+    await upsertPackage({
       id: draft.id || "__new__",
       name: String(draft.name).trim(),
       description: String(draft.description || "").trim(),
