@@ -5,6 +5,7 @@ import {
   CUSTOMER_SORT_FIELDS,
   archiveCustomer,
   createCustomer,
+  deleteCustomer,
   getCustomer,
   getCustomerAttendance,
   getCustomerLedger,
@@ -47,6 +48,11 @@ export const update = asyncHandler(async (req, res) => {
 export const archive = asyncHandler(async (req, res) => {
   const customer = await archiveCustomer(req.params.id, { actor: req.ownerId });
   res.json({ data: { customer } });
+});
+
+export const remove = asyncHandler(async (req, res) => {
+  await deleteCustomer(req.params.id, { actor: req.ownerId });
+  res.json({ data: { deleted: true } });
 });
 
 export const restore = asyncHandler(async (req, res) => {
