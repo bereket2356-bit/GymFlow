@@ -49,6 +49,9 @@ export const api = {
     login: (email, password) => api.post("/auth/login", { email, password }),
     logout: () => api.post("/auth/logout"),
     me: () => api.get("/auth/me"),
+    updateProfile: (body) => api.patch("/auth/me", body),
+    changePassword: (body) => api.post("/auth/change-password", body),
+    signOutAll: (body) => api.post("/auth/sign-out-all", body),
   },
   customers: {
     list: (params = {}) => {
@@ -64,6 +67,7 @@ export const api = {
     get: (id) => api.get(`/customers/${id}`),
     create: (body) => api.post("/customers", body),
     update: (id, body) => api.patch(`/customers/${id}`, body),
+    delete: (id) => api.del(`/customers/${id}`),
     archive: (id) => api.post(`/customers/${id}/archive`),
     restore: (id) => api.post(`/customers/${id}/restore`),
     ledger: (id) => api.get(`/customers/${id}/ledger`),

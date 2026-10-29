@@ -1,10 +1,22 @@
-/** Currency formatting for the prototype's placeholder currency ($). */
-export function money(n) {
+let currentCurrencySymbol = "$";
+
+export function setCurrencySymbol(symbol) {
+  if (symbol) currentCurrencySymbol = symbol;
+}
+
+export function getCurrencySymbol() {
+  return currentCurrencySymbol;
+}
+
+/** Currency formatting with dynamic gym currency support. */
+export function money(n, symbol) {
+  const sym = symbol || currentCurrencySymbol;
   const v = Math.abs(Number(n) || 0);
   const s = Number.isInteger(v)
     ? v.toLocaleString("en-US")
     : v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return (n < 0 ? "−" : "") + "$" + s;
+  const prefix = sym === "$" ? "$" : `${sym} `;
+  return (n < 0 ? "−" : "") + prefix + s;
 }
 
 export function num(n) {
