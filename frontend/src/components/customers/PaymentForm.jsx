@@ -104,8 +104,8 @@ export function PaymentModal({ customerId, onClose }) {
             <Button onClick={() => setStep("form")}>Back</Button>
             <Button
               variant="primary"
-              onClick={() => {
-                addPayment({
+              onClick={async () => {
+                await addPayment({
                   customerId: form.customerId,
                   membershipId: target.id,
                   amount,
@@ -316,8 +316,8 @@ export function CorrectionModal({ customerId, onClose }) {
             <Button onClick={() => setStep("form")}>Back</Button>
             <Button
               variant="primary"
-              onClick={() => {
-                addCorrection({
+              onClick={async () => {
+                await addCorrection({
                   customerId: customer.id,
                   membershipId: membership.id,
                   amount: parsedAmount,
