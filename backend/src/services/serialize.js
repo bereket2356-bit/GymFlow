@@ -3,11 +3,24 @@ import { toISODate } from "../utils/dates.js";
 
 const idOf = (value) => (value && typeof value === "object" && value._id ? String(value._id) : value ? String(value) : null);
 
+export function getAvatarInitials(name, displayName) {
+  const target = (displayName && displayName.trim()) || (name && name.trim()) || "";
+  const parts = target.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + (parts[1]?.[0] || "")).toUpperCase();
+}
+
 export function serializeOwner(owner) {
   return {
     id: String(owner._id),
     email: owner.email,
     name: owner.name,
+    displayName: owner.displayName ?? null,
+    phone: owner.phone ?? null,
+    avatarInitials: getAvatarInitials(owner.name, owner.displayName),
     role: owner.role,
     lastLoginAt: owner.lastLoginAt ? new Date(owner.lastLoginAt).toISOString() : null,
   };

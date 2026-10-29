@@ -16,7 +16,8 @@ import {
 } from "./membershipService.js";
 import { serializeCustomer, serializeMembership, serializePayment } from "./serialize.js";
 import { recordAudit } from "./auditService.js";
-import { notFound, businessRule } from "../utils/errors.js";
+import { notFound, businessRule, customerHasRecords } from "../utils/errors.js";
+import { withOptionalTransaction } from "../utils/transactions.js";
 import {
   addDaysISO,
   parseISODate,
@@ -230,6 +231,54 @@ export async function restoreCustomer(idOrCode, { actor }) {
  * Chronological ledger: membership charges increase what is owed, payments
  * reduce it, and signed adjustments move it in the direction they are recorded.
  */
+export async function deleteCustomer(idOrCode, { actor }) {
+  const customer = await findCustomerOrThrow(idOrCode);
+
+  return withOptionalTransaction(async (session) => {
+    const membershipCount = await Membership.countDocuments({ customer: customer._id }).session(session);
+    if (membershipCount > 0) {
+      throw customerHasRecords();
+    }
+
+    const paymentCount = await Payment.countDocuments({ customer: customer._id }).session(session);
+    if (paymentCount > 0) {
+      throw customerHasRecords();
+    }
+
+    const attendanceCount = await Attendance.countDocuments({ customer: customer._id }).session(session);
+    if (attendanceCount > 0) {
+      throw customerHasRecords();
+    }
+
+    const paymentIds = await Payment.find({ customer: customer._id }).session(session).distinct("_id");
+    if (paymentIds.length > 0) {
+      const adjustmentCount = await PaymentAdjustment.countDocuments({
+        originalPayment: { $in: paymentIds },
+      }).session(session);
+      if (adjustmentCount > 0) {
+        throw customerHasRecords();
+      }
+    }
+
+    await Customer.deleteOne({ _id: customer._id }, { session });
+
+    await recordAudit({
+      actor,
+      action: "customer.delete",
+      entityType: "Customer",
+      entityId: customer._id,
+      before: {
+        customerId: customer.customerId,
+        name: customer.name,
+      },
+      after: null,
+      session,
+    });
+
+    return { id: String(customer._id), customerId: customer.customerId, name: customer.name };
+  });
+}
+
 export async function getCustomerLedger(idOrCode, settings) {
   const customer = await findCustomerOrThrow(idOrCode);
   const [memberships, payments] = await Promise.all([
