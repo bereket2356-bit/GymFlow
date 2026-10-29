@@ -25,7 +25,7 @@ export default function Sidebar({ onNavigate }) {
     navigate("/signin");
   };
 
-  const ownerName = user?.name || OWNER.name;
+  const ownerName = user?.displayName || user?.name || OWNER.name;
   const ownerInitials = user?.initials || OWNER.initials;
   const ownerRole = user?.role || OWNER.role;
 
@@ -36,7 +36,7 @@ export default function Sidebar({ onNavigate }) {
           <span className="brand-mark">{BRAND_MARK}</span>
           <span>
             <span className="brand-name">BGMS</span>
-            <span className="brand-sub">Foundry Boxing</span>
+            <span className="brand-sub">{gym?.name || "Boxing Gym"}</span>
           </span>
         </NavLink>
       </div>

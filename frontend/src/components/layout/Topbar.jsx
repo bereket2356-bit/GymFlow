@@ -11,7 +11,7 @@ export default function Topbar({ navOpen, onOpenMenu }) {
   const { user } = useAuth();
   const [now, setNow] = useState(() => fmtLong(TODAY) + " · " + clockLabel() + " · " + TZ_LABEL);
 
-  const ownerName = user?.name || OWNER.name;
+  const ownerName = user?.displayName || user?.name || OWNER.name;
   const ownerRole = user?.role || OWNER.role;
   const ownerInitials = user?.initials || OWNER.initials;
 
