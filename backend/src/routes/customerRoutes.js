@@ -6,6 +6,7 @@ import {
   detail,
   ledger,
   list,
+  remove,
   restore,
   update,
 } from "../controllers/customerController.js";
@@ -26,6 +27,7 @@ router.get("/", validate({ query: listCustomersQuery }), list);
 router.post("/", validate({ body: createCustomerBody }), create);
 router.get("/:id", validate({ params: idParams }), detail);
 router.patch("/:id", validate({ params: idParams, body: updateCustomerBody }), update);
+router.delete("/:id", validate({ params: idParams }), remove);
 router.post("/:id/archive", validate({ params: idParams }), archive);
 router.post("/:id/restore", validate({ params: idParams }), restore);
 router.get("/:id/ledger", validate({ params: idParams }), ledger);
