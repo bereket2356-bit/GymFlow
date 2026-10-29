@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import { useData } from "../../context/DataContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { OWNER, TZ_LABEL } from "../../data/config.js";
 import { TODAY, fmtLong, clockLabel } from "../../lib/dates.js";
 
 /** Sticky top bar: menu button (mobile), gym name, theme switch, clock, avatar. */
 export default function Topbar({ navOpen, onOpenMenu }) {
   const { gym } = useData();
+  const { user } = useAuth();
   const [now, setNow] = useState(() => fmtLong(TODAY) + " · " + clockLabel() + " · " + TZ_LABEL);
+
+  const ownerName = user?.name || OWNER.name;
+  const ownerRole = user?.role || OWNER.role;
+  const ownerInitials = user?.initials || OWNER.initials;
 
   useEffect(() => {
     const tick = () => setNow(fmtLong(TODAY) + " · " + clockLabel() + " · " + TZ_LABEL);
@@ -34,10 +40,9 @@ export default function Topbar({ navOpen, onOpenMenu }) {
         <ThemeSwitch variant="topbar" />
       </div>
       <div className="topbar-meta">
-        <span className="tag">Sample data</span>
         <span className="clock">{now}</span>
-        <span className="avatar" aria-hidden="true" title={OWNER.name + ", " + OWNER.role}>
-          {OWNER.initials}
+        <span className="avatar" aria-hidden="true" title={ownerName + ", " + ownerRole}>
+          {ownerInitials}
         </span>
       </div>
     </header>
