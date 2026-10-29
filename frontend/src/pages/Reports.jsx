@@ -26,12 +26,31 @@ function csvEscape(cell) {
 
 /** Reports: cash received, membership value, outstanding and new customers, kept apart. */
 export default function Reports() {
-  const { sel, reports, setReports, payments } = useData();
+  const { sel, reports, setReports, payments, gym, loading, error: dataError, refreshData } = useData();
   const { push } = useToast();
   const navigate = useNavigate();
   const [from, setFrom] = useState(reports.from);
   const [to, setTo] = useState(reports.to);
   const [error, setError] = useState("");
+
+  if (loading) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p>Loading reports and ledger analytics…</p>
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p style={{ color: "var(--danger)", marginBottom: 12 }}>{dataError}</p>
+        <button className="btn btn-primary btn-sm" type="button" onClick={refreshData}>
+          Retry connection
+        </button>
+      </div>
+    );
+  }
 
   const apply = (e) => {
     e.preventDefault();
@@ -83,7 +102,7 @@ export default function Reports() {
 
   const exportCsv = () => {
     const rows = [];
-    rows.push(["BGMS report", "Foundry Boxing Club", fmtDate(reports.from) + " to " + fmtDate(reports.to), "All figures are owner-recorded sample data"]);
+    rows.push(["BGMS report", gym.name, fmtDate(reports.from) + " to " + fmtDate(reports.to)]);
     rows.push([]);
     rows.push(["Metric", "Value"]);
     rows.push(["Cash received (manual payments)", cash]);

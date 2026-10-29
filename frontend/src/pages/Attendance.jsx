@@ -4,7 +4,6 @@ import Segmented from "../components/ui/Segmented.jsx";
 import Pill from "../components/ui/Pill.jsx";
 import Modal from "../components/ui/Modal.jsx";
 import Button from "../components/ui/Button.jsx";
-import AttendanceFlow from "../components/diagrams/AttendanceFlow.jsx";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { TODAY, fmtLong, fmtShort, plural } from "../lib/dates.js";
@@ -26,7 +25,7 @@ function initials(name) {
 
 /** Attendance: pick a session, mark the roster, save with one deduction per session. */
 export default function Attendance() {
-  const { sessions, marks, savedMarks, toggleMark, saveAttendance, customerById } = useData();
+  const { sessions, marks, savedMarks, toggleMark, saveAttendance, customerById, loading, error, refreshData } = useData();
   const { push } = useToast();
   const navigate = useNavigate();
   const [selected, setSelected] = useState(sessions[0] ? sessions[0].id : null);
@@ -37,7 +36,32 @@ export default function Attendance() {
     [sessions, selected],
   );
 
-  if (!session) return null;
+  if (loading) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p>Loading attendance rosters…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p style={{ color: "var(--danger)", marginBottom: 12 }}>{error}</p>
+        <button className="btn btn-primary btn-sm" type="button" onClick={refreshData}>
+          Retry connection
+        </button>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p>No training sessions scheduled for today.</p>
+      </div>
+    );
+  }
 
   const roster = ROSTERS[session.id] || [];
   const sessionMarks = marks[session.id] || {};
@@ -115,19 +139,6 @@ export default function Attendance() {
           </p>
         </div>
       </div>
-
-      <section className="card" style={{ marginBottom: 16 }} aria-labelledby="flow-title">
-        <div className="card-head">
-          <div>
-            <h2 className="card-title" id="flow-title">Attendance to session</h2>
-            <p className="card-sub">What happens after the owner marks the roster.</p>
-          </div>
-          <span className="tag">Internal only</span>
-        </div>
-        <div className="card-body">
-          <AttendanceFlow />
-        </div>
-      </section>
 
       <section className="card" aria-labelledby="roster-title">
         <div className="card-head">

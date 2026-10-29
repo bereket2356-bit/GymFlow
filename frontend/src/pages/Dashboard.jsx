@@ -6,7 +6,6 @@ import Sparkline from "../components/diagrams/Sparkline.jsx";
 import RevenueDonut from "../components/diagrams/RevenueDonut.jsx";
 import SessionTimeline from "../components/diagrams/SessionTimeline.jsx";
 import LifecycleDiagram from "../components/diagrams/LifecycleDiagram.jsx";
-import ReminderPipeline from "../components/diagrams/ReminderPipeline.jsx";
 import { NewCustomerModal, MembershipModal } from "../components/customers/CustomerModals.jsx";
 import { PaymentModal } from "../components/customers/PaymentForm.jsx";
 import { useData } from "../context/DataContext.jsx";
@@ -59,10 +58,29 @@ function ReminderItem({ reminder, reviewed, onReview, onOpen }) {
 
 /** Dashboard: instrument strip, revenue, reminders, today's sessions, quick actions. */
 export default function Dashboard() {
-  const { sel, period, setPeriod, isReviewed, markReviewed, sessions } = useData();
+  const { sel, period, setPeriod, isReviewed, markReviewed, sessions, loading, error, refreshData } = useData();
   const { push } = useToast();
   const navigate = useNavigate();
   const [modal, setModal] = useState(null);
+
+  if (loading) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p>Loading dashboard instruments…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p style={{ color: "var(--danger)", marginBottom: 12 }}>{error}</p>
+        <button className="btn btn-primary btn-sm" type="button" onClick={refreshData}>
+          Retry connection
+        </button>
+      </div>
+    );
+  }
 
   const k = sel.kpi;
   const counts = k.counts;
@@ -316,23 +334,6 @@ export default function Dashboard() {
           </div>
           <div className="card-body">
             <LifecycleDiagram counts={counts} />
-          </div>
-        </section>
-
-        <section className="card col-12" aria-labelledby="pipe-title">
-          <div className="card-head">
-            <div>
-              <h2 className="card-title" id="pipe-title">Reminder pipeline</h2>
-              <p className="card-sub">From business events to a reviewed note. No customer is ever messaged.</p>
-            </div>
-            <span className="tag">No message sent</span>
-          </div>
-          <ReminderPipeline />
-          <div className="card-foot">
-            <span className="fine-print">
-              Rules are checked when the console renders and after the owner changes a record. Reviewed reminders stay
-              in the log for the day but are dimmed.
-            </span>
           </div>
         </section>
       </div>

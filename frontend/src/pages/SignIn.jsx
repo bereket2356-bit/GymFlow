@@ -6,16 +6,15 @@ import { useToast } from "../context/ToastContext.jsx";
 import { TZ_LABEL, OWNER } from "../data/config.js";
 
 /**
- * Owner sign-in. Any valid email with a password of 6+ characters is accepted
- * in this sample build. State lives in memory only.
+ * Owner sign-in screen for BGMS console.
  */
 export default function SignIn() {
   const { signIn } = useAuth();
   const { push } = useToast();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("owner@foundryboxing.com");
-  const [password, setPassword] = useState("Foundry123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [forgot, setForgot] = useState("");
@@ -74,12 +73,9 @@ export default function SignIn() {
                 autoComplete="current-password"
                 value={password}
                 aria-invalid={errors.password ? "true" : undefined}
-                aria-describedby="password-hint password-error"
+                aria-describedby={errors.password ? "password-error" : undefined}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <p className="field-hint" id="password-hint">
-                Default owner credentials: owner@foundryboxing.com / Foundry123
-              </p>
               <p className="field-error" id="password-error" role="alert">{errors.password}</p>
             </div>
             <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: "100%" }}>
@@ -106,7 +102,7 @@ export default function SignIn() {
         </div>
         <div className="auth-foot">
           <span>{TZ_LABEL}</span>
-          <span>Sample data only · nothing is stored</span>
+          <span>Owner console</span>
         </div>
       </div>
     </div>

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import CustomerTable, { sortValue } from "../components/customers/CustomerTable.jsx";
-import { NewCustomerModal } from "../components/customers/CustomerModals.jsx";
+import { ArchiveModal, DeleteCustomerModal, NewCustomerModal } from "../components/customers/CustomerModals.jsx";
 import Icon from "../components/ui/Icon.jsx";
 import Pagination from "../components/ui/Pagination.jsx";
 import { useData } from "../context/DataContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
 import { money, num } from "../lib/money.js";
 import { plural } from "../lib/dates.js";
 import { currentMembership, memStatus, customerBalance } from "../lib/status.js";
@@ -23,13 +24,16 @@ const PER_PAGE = 6;
 
 /** Customer register: search, status filter chips, sortable table, pagination. */
 export default function Customers() {
-  const { customers, payments, sel } = useData();
+  const { customers, payments, sel, loading, error, refreshData, setArchived } = useData();
+  const { push } = useToast();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("name");
   const [dir, setDir] = useState("asc");
   const [page, setPage] = useState(1);
   const [newOpen, setNewOpen] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const nonArchived = sel.nonArchived();
 
@@ -162,13 +166,32 @@ export default function Customers() {
           </div>
         </div>
 
-        {slice.length ? (
+        {loading ? (
+          <div className="table-wrap">
+            <div className="table-empty">
+              <p>Loading customer files…</p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="table-wrap">
+            <div className="table-empty">
+              <p style={{ color: "var(--danger, #f43f5e)", marginBottom: 10 }}>{error}</p>
+              <button className="btn btn-sm btn-primary" type="button" onClick={refreshData}>Retry</button>
+            </div>
+          </div>
+        ) : slice.length ? (
           <CustomerTable
             customers={slice}
             payments={payments}
             sortKey={sort}
             dir={dir}
             onSort={onSort}
+            onArchive={(c) => setArchiveTarget(c)}
+            onRestore={async (c) => {
+              await setArchived(c.id, false);
+              push(c.name + " restored to the register.");
+            }}
+            onDelete={(c) => setDeleteTarget(c)}
           />
         ) : (
           <div className="table-wrap">
@@ -189,6 +212,23 @@ export default function Customers() {
       </section>
 
       {newOpen && <NewCustomerModal onClose={() => setNewOpen(false)} />}
+      {archiveTarget && (
+        <ArchiveModal
+          customerId={archiveTarget.id}
+          onClose={() => setArchiveTarget(null)}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteCustomerModal
+          customerId={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => setDeleteTarget(null)}
+          onArchiveInstead={(c) => {
+            setDeleteTarget(null);
+            setArchiveTarget(c);
+          }}
+        />
+      )}
     </>
   );
 }

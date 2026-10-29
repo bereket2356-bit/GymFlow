@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import CustomerHeader from "../components/customers/CustomerHeader.jsx";
 import Tabs from "../components/ui/Tabs.jsx";
 import Pill from "../components/ui/Pill.jsx";
@@ -8,7 +8,13 @@ import EmptyState from "../components/ui/EmptyState.jsx";
 import LedgerBar from "../components/diagrams/LedgerBar.jsx";
 import LifecycleDiagram from "../components/diagrams/LifecycleDiagram.jsx";
 import { PaymentModal, CorrectionModal } from "../components/customers/PaymentForm.jsx";
-import { MembershipModal, EditCustomerModal, ArchiveModal } from "../components/customers/CustomerModals.jsx";
+import {
+  ArchiveModal,
+  DeleteCustomerModal,
+  EditCustomerModal,
+  MembershipModal,
+} from "../components/customers/CustomerModals.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useData } from "../context/DataContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { money } from "../lib/money.js";
@@ -125,7 +131,10 @@ function VisitList({ log }) {
 /** Customer detail: identity header, four tabs, owner-only notes, money actions. */
 export default function CustomerDetail() {
   const { id } = useParams();
-  const { customerById, fetchCustomerDetail, payments, saveNotes, setArchived, sel, attendanceLog } = useData();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner" || !user?.role;
+  const { customerById, fetchCustomerDetail, payments, saveNotes, setArchived, sel, attendanceLog, loading, error, refreshData } = useData();
   const { push } = useToast();
   const [tab, setTab] = useState("overview");
   const [modal, setModal] = useState(null);
@@ -143,6 +152,25 @@ export default function CustomerDetail() {
   useEffect(() => {
     setDraft(customer ? customer.notes || "" : "");
   }, [customer]);
+
+  if (loading && !customer) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p>Loading customer profile…</p>
+      </div>
+    );
+  }
+
+  if (error && !customer) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p style={{ color: "var(--danger)", marginBottom: 12 }}>{error}</p>
+        <button className="btn btn-primary btn-sm" type="button" onClick={refreshData}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (!customer) {
     return (
@@ -182,6 +210,11 @@ export default function CustomerDetail() {
         Restore customer
       </button>
       <button className="btn" type="button" onClick={() => setModal("edit")}>Edit details</button>
+      {isOwner && (
+        <button className="btn btn-danger" type="button" onClick={() => setModal("delete")}>
+          Delete
+        </button>
+      )}
     </>
   ) : (
     <>
@@ -190,7 +223,12 @@ export default function CustomerDetail() {
       </button>
       <button className="btn" type="button" onClick={() => setModal("renew")}>Renew</button>
       <button className="btn" type="button" onClick={() => setModal("edit")}>Edit</button>
-      <button className="btn btn-danger" type="button" onClick={() => setModal("archive")}>Archive</button>
+      <button className="btn" type="button" onClick={() => setModal("archive")}>Archive</button>
+      {isOwner && (
+        <button className="btn btn-danger" type="button" onClick={() => setModal("delete")}>
+          Delete
+        </button>
+      )}
     </>
   );
 
@@ -608,9 +646,6 @@ export default function CustomerDetail() {
                 No visits recorded for this customer yet.
               </EmptyState>
             )}
-            <p className="note-line" style={{ marginTop: 12 }}>
-              Session names are sample data. Attendance records are kept with the customer.
-            </p>
           </div>
         </section>
       </div>
@@ -635,6 +670,14 @@ export default function CustomerDetail() {
       {modal === "renew" && <MembershipModal customerId={customer.id} mode="renew" onClose={() => setModal(null)} />}
       {modal === "edit" && <EditCustomerModal customerId={customer.id} onClose={() => setModal(null)} />}
       {modal === "archive" && <ArchiveModal customerId={customer.id} onClose={() => setModal(null)} />}
+      {modal === "delete" && (
+        <DeleteCustomerModal
+          customerId={customer}
+          onClose={() => setModal(null)}
+          onDeleted={() => navigate("/customers", { replace: true })}
+          onArchiveInstead={() => setModal("archive")}
+        />
+      )}
     </>
   );
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import PackageTable from "../components/packages/PackageTable.jsx";
 import PackageForm from "../components/packages/PackageForm.jsx";
-import PackageAnatomy from "../components/diagrams/PackageAnatomy.jsx";
 import Modal from "../components/ui/Modal.jsx";
 import Button from "../components/ui/Button.jsx";
 import Icon from "../components/ui/Icon.jsx";
@@ -19,12 +18,31 @@ const CHIPS = [
  * editor warns before type or session changes on packages with members.
  */
 export default function Packages() {
-  const { packages, setPackageActive, sel } = useData();
+  const { packages, setPackageActive, sel, loading, error, refreshData } = useData();
   const { push } = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [editor, setEditor] = useState(null); // package id, or "__new__"
   const [pendingToggle, setPendingToggle] = useState(null);
+
+  if (loading) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p>Loading package catalogue…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="empty-state" style={{ padding: "80px 0" }}>
+        <p style={{ color: "var(--danger)", marginBottom: 12 }}>{error}</p>
+        <button className="btn btn-primary btn-sm" type="button" onClick={refreshData}>
+          Retry connection
+        </button>
+      </div>
+    );
+  }
 
   const activeTotal = packages.filter((p) => p.active).length;
   const inactiveTotal = packages.length - activeTotal;
@@ -86,8 +104,6 @@ export default function Packages() {
           </button>
         </div>
       </div>
-
-      <PackageAnatomy />
 
       <section className="card" aria-labelledby="pkg-list-title">
         <div className="card-head">
