@@ -21,7 +21,7 @@ export default function Settings() {
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const next = {};
     const w7 = parseInt(form.warn7, 10);
@@ -44,7 +44,7 @@ export default function Settings() {
     setErrors(next);
     if (Object.keys(next).length) return;
 
-    updateGym({
+    await updateGym({
       name: form.name.trim(),
       warn7: w7,
       warn3: w3,
